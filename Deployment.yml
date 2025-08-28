@@ -1,0 +1,64 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-ansible-deploy
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: versioned-hello
+  namespace: my-ansible-deploy
+  labels:
+    app: versioned-hello
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: versioned-hello
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: versioned-hello
+    spec:
+      containers:
+        - name: versioned-hello
+          image: quay.io/redhattraining/do100-versioned-hello:v1.0-external
+          ports:
+            - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+  namespace: my-ansible-deploy
+spec:
+  selector:
+    app: versioned-hello
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+  namespace: my-ansible-deploy
+spec:
+  rules:
+    - host: hello.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello
+                port:
+                  number: 8080

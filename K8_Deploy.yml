@@ -1,0 +1,29 @@
+---
+- name: Deploy app into Kubernetes
+  hosts: k8
+  gather_facts: no   # you don’t need facts for this playbook
+
+  tasks:
+    - name: Ensure namespace exists
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: my-ansible-deploy
+
+    - name: Wait until namespace is active
+      k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: my-ansible-deploy
+      register: ns_info
+      until: ns_info.resources | length > 0 and ns_info.resources[0].status.phase == "Active"
+      retries: 10
+      delay: 3
+
+    - name: Apply Deployment, Service, and Ingress
+      k8s:
+        state: present
+        definition: "{{ lookup('file', 'Deployment.yml') }}"
